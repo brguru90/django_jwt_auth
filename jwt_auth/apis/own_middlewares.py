@@ -12,6 +12,8 @@ def set_token(data):
         'exp': datetime.datetime.utcnow() + datetime.timedelta(days=0, minutes=5),
         'iat': datetime.datetime.utcnow(),
     }
+    # access_token = jwt.encode(access_token_payload,
+    #                         settings.PRIVATE_KEY, algorithm='RS256').decode('utf-8')
     access_token = jwt.encode(access_token_payload,
                             settings.SECRET_KEY, algorithm='HS256').decode('utf-8')
     return access_token
@@ -53,6 +55,7 @@ def login_check(param1=None):
                 else:
                     raise Exception("did not received token")
                 print("access_token",access_token)
+                # payload = jwt.decode(access_token, settings.PUBLIC_KEY, algorithms=['RS256'])
                 payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=['HS256'])
                 return view_func(request, payload,*args, **kwargs) 
                 
