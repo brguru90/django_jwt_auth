@@ -62,6 +62,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware'
 ]
 
+
 ROOT_URLCONF = 'jwt_auth.urls'
 
 TEMPLATES = [

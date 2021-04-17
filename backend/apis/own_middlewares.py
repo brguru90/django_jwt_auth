@@ -2,12 +2,14 @@
 from django.conf import settings
 from functools import wraps
 from django.http.response import JsonResponse,HttpResponse
+from django.core.serializers import serialize
+from django.core.serializers.json import DjangoJSONEncoder
 from .models import tokenBlackList
 from django.db.models import Q
 import jwt
-import json,datetime,random,sys
+import json,datetime,random,sys,time,os
 from inspect import currentframe, getframeinfo
-
+import multiprocessing
 
 
 class MyException(Exception):
@@ -106,6 +108,7 @@ def black_list_token(token_payload):
         token_black_list=tokenBlackList()
         token_black_list.userid=token_payload["uname"]
         token_black_list.block_token=token_payload["token_id"]
+        token_black_list.block_token_expire=datetime.datetime.fromtimestamp(token_payload["exp"])
         token_black_list.save()
         if token_black_list != None:
             return LOGOUT_ERR[0]
@@ -115,11 +118,12 @@ def black_list_token(token_payload):
         return LOGOUT_ERR[2]
 
 
-def black_list_tokens_from(token_payload,block_list_token_created_from_date):
+def black_list_tokens_from(token_payload,block_list_all_token_created_before):
     try:
         token_black_list=tokenBlackList()
         token_black_list.userid=token_payload["uname"]
-        token_black_list.block_until_date=block_list_token_created_from_date
+        # block all tokens created before block_list_all_token_created_before(today)
+        token_black_list.block_until_date=block_list_all_token_created_before
         token_black_list.save()
         if token_black_list != None:
             return LOGOUT_ERR[0]
@@ -127,3 +131,23 @@ def black_list_tokens_from(token_payload,block_list_token_created_from_date):
             return LOGOUT_ERR[1]
     except:
         return LOGOUT_ERR[2]
+
+
+
+def cleanup_old_tokens():
+    if os.fork() != 0:
+        return
+    while True:
+        now=datetime.datetime.utcnow()
+        # clean up individual token of expire
+        # clean up token those of which (block_until_date+expire) is expired
+        block_lists=tokenBlackList.objects.filter(Q(block_until_date__lte=now-datetime.timedelta(days=0, minutes=settings.JWT_TOKEN_EXPIRE)) | Q(block_token_expire__lte=now))
+        print("deleting block_lists",block_lists.count(),now)
+        block_lists.delete()
+       
+        time.sleep(60)
+
+
+if "makemigrations" not in sys.argv and "migrate" not in sys.argv:
+    #  need to use provided schedular to avoid DB reconnect issue
+    multiprocessing.Process(target=cleanup_old_tokens).start()
