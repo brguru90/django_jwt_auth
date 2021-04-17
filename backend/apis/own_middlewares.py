@@ -2,14 +2,24 @@
 from django.conf import settings
 from functools import wraps
 from django.http.response import JsonResponse,HttpResponse
+from .models import tokenBlackList
+from django.db.models import Q
 import jwt
-import json,datetime
+import json,datetime,random,sys
+from inspect import currentframe, getframeinfo
 
 
-def set_token(data):
+
+class MyException(Exception):
+    pass
+
+
+def set_token(data,uname):
     access_token_payload = {
         'data':data,
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=0, minutes=5),
+        'uname':uname,
+        'token_id':str(random.randint(1,1000))+"_"+str(datetime.datetime.utcnow().timestamp()),
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=0, minutes=settings.JWT_TOKEN_EXPIRE),
         'iat': datetime.datetime.utcnow(),
     }
     # access_token = jwt.encode(access_token_payload,
@@ -47,21 +57,23 @@ def login_check(param1=None):
                 "msg_type": "info"
             }        
             try:  
-                print("request.COOKIES",request.COOKIES)             
                 if "Authorization" in request.headers:
                     access_token = request.headers.get('Authorization')
                 elif "access_token" in request.COOKIES:
                     access_token=request.COOKIES.get("access_token")
                 else:
-                    raise Exception("did not received token")
-                print("access_token",access_token)
+                    raise MyException("did not received token")
                 # payload = jwt.decode(access_token, settings.PUBLIC_KEY, algorithms=['RS256'])
                 payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=['HS256'])
+                block_listed=tokenBlackList.objects.filter(Q(userid=payload["uname"]) & (Q(block_token=payload["token_id"]) | Q(block_until_date__gt=datetime.datetime.fromtimestamp(payload["iat"])))  ).count()
+                if block_listed>0:
+                    raise MyException("User logged out")
+
                 return view_func(request, payload,*args, **kwargs) 
                 
             except jwt.ExpiredSignatureError:
                 status = {
-                    "status": "access_token expired",
+                    "status": "Token expired",
                     "msg_type": "error"
                 }
             except IndexError:
@@ -69,8 +81,14 @@ def login_check(param1=None):
                     "status": "Token prefix missing",
                     "msg_type": "error"
                 }
+
+            except MyException as e:
+                status = {
+                    "status": str(e),
+                    "msg_type": "error"
+                }
             except Exception as e:
-                print(str(e))
+                print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__,getframeinfo(currentframe()).filename, e)
                 status = {
                     "status": "Unknown error",
                     "msg_type": "error"
@@ -79,3 +97,33 @@ def login_check(param1=None):
 
         return validator
     return decorator
+
+
+LOGOUT_ERR=["success","fail","exception"]
+
+def black_list_token(token_payload):
+    try:
+        token_black_list=tokenBlackList()
+        token_black_list.userid=token_payload["uname"]
+        token_black_list.block_token=token_payload["token_id"]
+        token_black_list.save()
+        if token_black_list != None:
+            return LOGOUT_ERR[0]
+        else:
+            return LOGOUT_ERR[1]
+    except:
+        return LOGOUT_ERR[2]
+
+
+def black_list_tokens_from(token_payload,block_list_token_created_from_date):
+    try:
+        token_black_list=tokenBlackList()
+        token_black_list.userid=token_payload["uname"]
+        token_black_list.block_until_date=block_list_token_created_from_date
+        token_black_list.save()
+        if token_black_list != None:
+            return LOGOUT_ERR[0]
+        else:
+            return LOGOUT_ERR[1]
+    except:
+        return LOGOUT_ERR[2]

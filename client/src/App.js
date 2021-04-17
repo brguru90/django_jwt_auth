@@ -73,7 +73,7 @@ function App() {
 
   }
 
-  const verifyLogin2= () => {
+  const verifyLogin2 = () => {
 
     fetch("/api/verify_login/", {
       method: "post",
@@ -94,6 +94,44 @@ function App() {
 
   }
 
+  const logout = () => {
+    fetch("/api/logout/", {
+      method: "post",
+      headers: {
+        "Content-Type": "application/json;charset=utf-8",
+        'X-CSRFToken': getCookie("csrftoken"),
+      },
+      credentials: 'include'
+    })
+      .then((res) => res.json())
+      .then((response) => {
+        setResponse(response)
+      })
+      .catch(err => {
+        console.error(err)
+        alert("error")
+      })
+  }
+
+
+  const logout_from_all = () => {
+    fetch("/api/logout_all/", {
+      method: "post",
+      headers: {
+        "Content-Type": "application/json;charset=utf-8",
+        'X-CSRFToken': getCookie("csrftoken"),
+      },
+      credentials: 'include'
+    })
+      .then((res) => res.json())
+      .then((response) => {
+        setResponse(response)
+      })
+      .catch(err => {
+        console.error(err)
+        alert("error")
+      })
+  }
 
   return (
     <div className="App">
@@ -101,9 +139,16 @@ function App() {
         <button onClick={login}>Login</button>
         <button onClick={verifyLogin}>Verify login by sending token as authorization header</button>
         <button onClick={verifyLogin2}>Verify login by sending token in http only cookie</button>
+
         <div className="break">
           {JSON.stringify(response)}
         </div>
+
+      </div>
+      <br />
+      <div className="contents">
+        <button onClick={logout}>Logout</button>
+        <button onClick={logout_from_all}>Logout from all</button>
       </div>
     </div>
   );

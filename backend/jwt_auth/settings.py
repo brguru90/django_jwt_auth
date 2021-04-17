@@ -34,13 +34,16 @@ CORS_ORIGIN_WHITELIST = [
 # SESSION_COOKIE_SECURE=True
 
 
+
+JWT_TOKEN_EXPIRE=5  # MIns
+
+
 # Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
-    'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
