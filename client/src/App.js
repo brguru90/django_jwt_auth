@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState ,useEffect } from "react"
 import logo from './logo.svg';
 import './App.css';
 
@@ -20,11 +20,21 @@ function getCookie(name) {
 }
 
 
-function App() {
+function App() { 
 
   const [token, setToken] = useState(null)
   const [response, setResponse] = useState("")
 
+
+  useEffect(() => {
+    try {
+      let _token=localStorage.getItem("token")
+      setToken(_token)
+    } catch (error) {
+      console.error(error)
+    }
+  }, [])
+  
   let jwt_token = null
 
   const login = () => {
@@ -42,6 +52,7 @@ function App() {
       .then((response) => {
         if (response.access_token) {
           setToken(response.access_token)
+          localStorage.setItem("token",response.access_token)
         }
         setResponse(response)
       })
