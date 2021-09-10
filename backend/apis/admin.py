@@ -1,3 +1,5 @@
 from django.contrib import admin
+from .models import tokenBlackList
 
-# Register your models here.
+
+admin.site.register(tokenBlackList)

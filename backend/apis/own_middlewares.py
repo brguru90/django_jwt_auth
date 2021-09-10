@@ -16,7 +16,7 @@ class MyException(Exception):
     pass
 
 
-def set_token(data,uname):
+def set_token(uname,data):
     access_token_payload = {
         'data':data,
         'uname':uname,
